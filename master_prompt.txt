@@ -1,0 +1,47 @@
+# MISSION: Deterministic 1:1 Pixel-Accurate Webpage Replica
+
+You are tasked with building a 100% exact visual and structural replica of the target website. 
+You must operate under a **Strict Closed-World Assumption**: All necessary design tokens, layout geometry, copy, media assets, and structural specifications are already captured in the offline bundle.
+
+---
+
+### THE 5 BUNDLE FILES & THEIR AUTHORITY PRIORITY:
+1. **`REPLICA_GUIDE.md` (Highest Authority - Layout & Structure)**: 
+   Read this first. It contains the exact band-by-band spatial contracts, section title ribbons, split column ratios (`65% / 35%`, `70% / 30%`), floating overlay positions, and component recipes. Follow this in exact sequential order.
+2. **`DESIGN.md` (Design Tokens)**: 
+   Use the exact hex codes, RGB values, typography scales, border radii, and shadows specified here.
+3. **`content.md` (Hierarchical Content & Media Catalog)**: 
+   Use only the exact text, navigation items, image URLs, counter values, and card data cataloged here.
+4. **`screenshot.png` (Visual Ground Truth)**: 
+   Inspect this image to verify spatial alignment, visual weight, color contrast, and component placement.
+5. **`rendered.html` (DOM Reference)**: 
+   Inspect this file whenever you need to check original class names, HTML element hierarchy, or nested relationships.
+
+---
+
+### STRICT CONSTRAINTS (ZERO-HALLUCINATION CONTRACT):
+1. **NO DEFAULT TEMPLATING**: 
+   DO NOT generate a generic "modern SaaS" layout. Do not invent centered hero banners, modern rounded card templates, or generic Tailwind hero grids unless explicitly specified in `REPLICA_GUIDE.md`.
+2. **NO INVENTED ASSETS OR COPY**: 
+   Do not use placeholder text (`Lorem Ipsum`), unverified stock photos, or placeholder icons. Use strictly the images, copy, and icons provided in `content.md`.
+3. **RESPECT SECTION TITLE RIBBONS**: 
+   Whenever `REPLICA_GUIDE.md` specifies a `Section Title Ribbon`, it MUST be rendered as a full-width dark/accented divider bar (`width: 100%`, dark background, centered uppercase text) exactly as specified, NOT as a standard left-aligned `<h2>`.
+4. **RESPECT SPATIAL SPLIT RATIOS**: 
+   When a section specifies a multi-column split (e.g. `65% / 35%` or `70% / 30%`), you must explicitly configure CSS Flexbox or CSS Grid with those exact proportion percentages.
+5. **RESPECT FLOATING & OVERLAY CARDS**: 
+   If a section specifies a floating card over a banner (e.g., `position: absolute; right: ...; background: rgba(...)`), implement the card anchored at those exact coordinates with the specified semi-transparent overlay tint.
+6. **RESPECT ACTIVE & MICRO-COMPONENT STATES**: 
+   Implement active navigation states (e.g., colored pills/borders for current menu items), circular social buttons, KPI counter pairs (`number` + `label`), and media frames as detailed in the guide.
+
+---
+
+### EXECUTION WORKFLOW:
+1. **Analyze**: Read `REPLICA_GUIDE.md`, `DESIGN.md`, and `content.md` from the bundle.
+2. **Design Tokens**: Set up CSS root variables for colors, fonts, and container widths directly from `DESIGN.md`.
+3. **Build Sequentially**: Construct the webpage section by section, starting from Band 1 (Top Bar/Header) through to the final Band (Footer), directly matching the blueprint in `REPLICA_GUIDE.md`.
+4. **Verify**: Cross-check your rendered layout against `screenshot.png` to confirm 1:1 visual fidelity before finalizing.
+
+
+
+
+

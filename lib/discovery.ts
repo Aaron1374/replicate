@@ -66,6 +66,7 @@ export async function discoverLinks(page, baseUrl, maxPages) {
       'nav a', 'header a', 'footer a',
       '[role="navigation"] a', '[aria-label*="nav"] a',
       '[data-nav] a', '.nav a', '.navbar a', '.header a', '.menu a',
+      '.aspNetMenu a', '[id*="Menu"] a', '[id*="Nav"] a', '[id*="ctl00"] a', 'table.menu a',
     ];
 
     // Score links by location: nav/header/footer = 2, elsewhere = 1

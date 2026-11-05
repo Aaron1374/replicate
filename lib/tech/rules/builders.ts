@@ -17,6 +17,10 @@ export const BUILDER_RULES: TechRule[] = [
     version: [generatorVersion(/^Docusaurus v?([\d.]+)/)],
   },
   {
+    name: 'ASP.NET', category: 'meta-framework',
+    strong: [id('__VIEWSTATE'), id('__EVENTVALIDATION'), resource(/WebResource\.axd|ScriptResource\.axd/), glob('Sys.WebForms')],
+  },
+  {
     name: 'WordPress', category: 'site-builder',
     strong: [generator(/^WordPress/), resource(/\/wp-(content|includes)\//), glob('wp')],
     version: [generatorVersion(/^WordPress ([\d.]+)/)],

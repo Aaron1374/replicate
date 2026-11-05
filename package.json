@@ -97,7 +97,9 @@
     "liveness": "npm run build && node test/liveness.mjs sites-smoke.json",
     "release:churn": "npm run build && node tools/release-churn.mjs",
     "tailwind:check": "node tools/tailwind-check.mjs",
-    "design-md:check": "node tools/design-md-check.mjs"
+    "design-md:check": "node tools/design-md-check.mjs",
+    "bundle": "node tools/capture-bundle.mjs",
+    "capture": "node tools/capture-bundle.mjs"
   },
   "keywords": [
     "design-tokens",

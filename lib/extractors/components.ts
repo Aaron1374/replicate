@@ -2,7 +2,7 @@ export async function extractButtonStyles(page) {
   return await page.evaluate(() => {
     // Only real interactive buttons — not tabs, menus, dropdowns
     const candidates = Array.from(document.querySelectorAll(
-      'button, a[href], [role="button"]'
+      'button, a[href], [role="button"], input[type="submit"], input[type="button"], input[type="reset"], input[type="image"]'
     ));
 
     const isTransparent = (color) =>
@@ -41,14 +41,18 @@ export async function extractButtonStyles(page) {
         // Score by prominence
         let score = 0;
         if (el.tagName === 'BUTTON') score += 30;
+        if (el.tagName === 'INPUT') score += 28;
         if (role === 'button') score += 20;
         if (hasBackground) score += 20;
         if (hasBorder && !hasBackground) score += 10;
         if (aboveFold) score += 15;
         if (rect.top < 300) score += 10;
 
-        // Skip buttons with no visible text
-        const text = el.textContent?.trim().replace(/\s+/g, ' ') || '';
+        // Skip buttons with no visible text (read value for inputs)
+        const rawText = el.tagName === 'INPUT'
+          ? ((el as HTMLInputElement).value || (el as HTMLInputElement).alt || '')
+          : (el.textContent || '');
+        const text = rawText.trim().replace(/\s+/g, ' ');
         if (text.length === 0) continue;
 
         // Skip fully transparent backgrounds with no border (ghost-only inherited bg)
@@ -101,6 +105,7 @@ export async function extractInputStyles(page) {
   return await page.evaluate(() => {
     const inputs = Array.from(
       document.querySelectorAll(`
+        input:not([type]),
         input[type="text"],
         input[type="email"],
         input[type="password"],
