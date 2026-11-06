@@ -16,15 +16,48 @@
  */
 
 import { existsSync, mkdirSync, writeFileSync, readFileSync } from 'node:fs';
-import { join } from 'node:path';
+import { join, resolve } from 'node:path';
 import { execSync } from 'node:child_process';
 import { loadBrowserEngines } from '../dist/lib/browser.js';
 
 let rawArgs = process.argv.slice(2);
-let targetUrl = rawArgs.find(a => !a.startsWith('--'));
+
+// Parse auth session file (--auth or --cookie-file)
+let authFile = null;
+const authIndex = rawArgs.findIndex(a => a === '--auth' || a === '--cookie-file');
+if (authIndex !== -1 && rawArgs[authIndex + 1]) {
+  authFile = rawArgs[authIndex + 1];
+} else {
+  const authArg = rawArgs.find(a => a.startsWith('--auth=') || a.startsWith('--cookie-file='));
+  if (authArg) authFile = authArg.split('=')[1];
+}
+
+// Parse custom output directory (--output-dir or -o)
+let outputDirArg = null;
+const outIndex = rawArgs.findIndex(a => a === '--output-dir' || a === '-o');
+if (outIndex !== -1 && rawArgs[outIndex + 1]) {
+  outputDirArg = rawArgs[outIndex + 1];
+} else {
+  const outArg = rawArgs.find(a => a.startsWith('--output-dir='));
+  if (outArg) outputDirArg = outArg.split('=')[1];
+}
+
+// Find targetUrl, skipping flags and their parameter values
+let targetUrl = null;
+for (let i = 0; i < rawArgs.length; i++) {
+  const arg = rawArgs[i];
+  if (arg === '--auth' || arg === '--cookie-file' || arg === '--output-dir' || arg === '-o') {
+    i++;
+    continue;
+  }
+  if (!arg.startsWith('--')) {
+    targetUrl = arg;
+    break;
+  }
+}
 
 if (!targetUrl) {
-  console.error("Usage: node tools/capture-bundle.mjs <url> [--slow] [--mobile]");
+  console.error("Usage: node tools/capture-bundle.mjs <url> [--auth <session.json>] [--slow] [--mobile] [--output-dir <path>]");
   process.exit(1);
 }
 
@@ -35,14 +68,29 @@ if (!/^https?:\/\//i.test(targetUrl)) {
 const isSlow = rawArgs.includes('--slow');
 const isMobile = rawArgs.includes('--mobile');
 
+let resolvedAuthFile = null;
+if (authFile) {
+  resolvedAuthFile = resolve(process.cwd(), authFile);
+  if (!existsSync(resolvedAuthFile)) {
+    console.error(`\n❌ Error: Authentication session file not found: ${resolvedAuthFile}`);
+    console.error(`   Please run 'npm run login -- <LOGIN_URL>' first to generate it.\n`);
+    process.exit(1);
+  }
+}
+
 const domain = new URL(targetUrl).hostname.replace(/^www\./, '');
-const outputDir = join(process.cwd(), 'output', domain, 'bundle');
+const outputDir = outputDirArg 
+  ? resolve(process.cwd(), outputDirArg)
+  : join(process.cwd(), 'output', domain, 'bundle');
 mkdirSync(outputDir, { recursive: true });
 
 console.log(`\n=======================================================`);
 console.log(`📦 Deterministic Exact-Replica Capture for: ${targetUrl}`);
 console.log(`📁 Target bundle directory: ${outputDir}`);
 console.log(`⚙️ Mode: ${isMobile ? 'Mobile' : 'Desktop'} (1920x1080) | ASP.NET & Legacy Ready`);
+if (resolvedAuthFile) {
+  console.log(`🔐 Authenticated Session: ${resolvedAuthFile}`);
+}
 console.log(`=======================================================\n`);
 
 // 1. Run Dembrandt CLI to generate DESIGN.md
@@ -51,6 +99,7 @@ try {
   const flags = ['--design-md', '--no-headed-fallback'];
   if (isSlow) flags.push('--slow');
   if (isMobile) flags.push('--mobile');
+  if (resolvedAuthFile) flags.push(`--cookie-file "${resolvedAuthFile}"`);
 
   execSync(`node dist/index.js "${targetUrl}" ${flags.join(' ')}`, { stdio: 'ignore' });
   const rootDesignMd = join(process.cwd(), 'output', domain, 'DESIGN.md');
@@ -68,7 +117,7 @@ console.log(`[2/5] Launching Playwright to render and hydrate DOM...`);
 const { chromium } = await loadBrowserEngines();
 const browser = await chromium.launch({ headless: true });
 
-const context = await browser.newContext({
+const contextOptions = {
   viewport: isMobile ? { width: 390, height: 844 } : { width: 1920, height: 1080 },
   isMobile: isMobile,
   ignoreHTTPSErrors: true, // Essential for ASPX/intranet/legacy SSL certs
@@ -78,7 +127,33 @@ const context = await browser.newContext({
   extraHTTPHeaders: {
     'Accept-Language': 'en-US,en;q=0.9',
   }
-});
+};
+
+if (resolvedAuthFile) {
+  contextOptions.storageState = resolvedAuthFile;
+}
+
+const context = await browser.newContext(contextOptions);
+
+// If sessionStorage was captured in the auth file, inject it prior to page scripts running
+if (resolvedAuthFile) {
+  try {
+    const authData = JSON.parse(readFileSync(resolvedAuthFile, 'utf8'));
+    if (Array.isArray(authData.sessionStorage) && authData.sessionStorage.length > 0) {
+      await context.addInitScript((storageItems) => {
+        try {
+          const origin = window.location.origin;
+          const match = storageItems.find((item) => item.origin === origin);
+          if (match && Array.isArray(match.sessionStorage)) {
+            for (const entry of match.sessionStorage) {
+              window.sessionStorage.setItem(entry.name, entry.value);
+            }
+          }
+        } catch {}
+      }, authData.sessionStorage);
+    }
+  } catch {}
+}
 
 const page = await context.newPage();
 
@@ -89,6 +164,17 @@ try {
   
   try { 
     await page.waitForLoadState('networkidle', { timeout: isSlow ? 20000 : 10000 }); 
+  } catch {}
+
+  const finalUrl = page.url();
+  try {
+    const parsedTarget = new URL(targetUrl);
+    const parsedFinal = new URL(finalUrl);
+    if (parsedFinal.pathname !== parsedTarget.pathname && (finalUrl.includes('login') || finalUrl.includes('signin') || parsedFinal.pathname.endsWith('/home'))) {
+      console.warn(`\n  ⚠️  WARNING: Page redirected from ${targetUrl} to ${finalUrl}`);
+      console.warn(`     It looks like the authentication session expired or redirected back to the login/home page.`);
+      console.warn(`     If this is unexpected, try re-logging in with: npm run login -- <LOGIN_URL>\n`);
+    }
   } catch {}
 
   // ASP.NET AJAX PostBack & Settlement Check

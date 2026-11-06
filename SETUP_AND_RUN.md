@@ -63,6 +63,13 @@ npm run capture -- <TARGET_URL>
 
 # Recommended for heavy/ASP.NET/AJAX sites (adds extra settlement time)
 npm run capture -- <TARGET_URL> --slow
+
+# Authenticated pages (e.g. portals behind login)
+# 1. First save session interactively:
+npm run login -- <PORTAL_HOME_OR_LOGIN_URL> --save auth.json
+
+# 2. Then capture the target protected route:
+npm run capture -- <PROTECTED_ROUTE_URL> --auth auth.json --slow
 ```
 
 ### Examples

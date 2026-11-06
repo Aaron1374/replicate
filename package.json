@@ -99,7 +99,9 @@
     "tailwind:check": "node tools/tailwind-check.mjs",
     "design-md:check": "node tools/design-md-check.mjs",
     "bundle": "node tools/capture-bundle.mjs",
-    "capture": "node tools/capture-bundle.mjs"
+    "capture": "node tools/capture-bundle.mjs",
+    "batch": "node tools/batch-capture.mjs",
+    "login": "node tools/auth-login.mjs"
   },
   "keywords": [
     "design-tokens",
